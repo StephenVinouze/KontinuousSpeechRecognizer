@@ -64,7 +64,7 @@ class RecognitionManager(private val context: Context,
     }
 
     override fun onReadyForSpeech(params: Bundle) {
-        muteRecognition(!isActivated)
+        muteRecognition(shouldMute || !isActivated)
         callback?.onReadyForSpeech(params)
     }
 
