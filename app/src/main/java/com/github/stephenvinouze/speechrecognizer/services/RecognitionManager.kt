@@ -2,9 +2,11 @@ package com.github.stephenvinouze.speechrecognizer.services
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.SpeechRecognizer
+import timber.log.Timber
 
 /**
  * Created by stephenvinouze on 16/05/2017.
@@ -12,17 +14,19 @@ import android.speech.SpeechRecognizer
 class RecognitionManager(private val context: Context,
                          private val activationKeyword: String,
                          private val recognizerIntent: Intent,
-                         private val callback: RecognitionCallback? = null): RecognitionListener {
+                         private val callback: RecognitionCallback? = null) : RecognitionListener {
+
+    var shouldMute: Boolean = false
 
     private var isActivated: Boolean = false
     private var speech: SpeechRecognizer? = null
+    private var audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     init {
         initializeRecognizer()
     }
 
     fun startRecognition() {
-        cancelRecognition()
         speech?.startListening(recognizerIntent)
     }
 
@@ -35,6 +39,7 @@ class RecognitionManager(private val context: Context,
     }
 
     fun destroyRecognizer() {
+        muteRecognition(false)
         speech?.destroy()
     }
 
@@ -48,11 +53,18 @@ class RecognitionManager(private val context: Context,
         }
     }
 
+    private fun muteRecognition(mute: Boolean) {
+        val flag = if (mute) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE
+        audioManager.adjustStreamVolume(AudioManager.STREAM_MUSIC, flag, 0)
+        audioManager.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0)
+    }
+
     override fun onBeginningOfSpeech() {
         callback?.onBeginningOfSpeech()
     }
 
     override fun onReadyForSpeech(params: Bundle) {
+        muteRecognition(!isActivated)
         callback?.onReadyForSpeech(params)
     }
 
@@ -72,8 +84,10 @@ class RecognitionManager(private val context: Context,
         if (isActivated) {
             callback?.onError(errorCode)
         }
+        isActivated = false
 
         when (errorCode) {
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> cancelRecognition()
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                 destroyRecognizer()
                 initializeRecognizer()
@@ -103,7 +117,9 @@ class RecognitionManager(private val context: Context,
                 callback?.onResults(matches, scores)
             } else {
                 matches.forEach {
+                    Timber.i("Keyword found : %s", it)
                     if (it.contains(other = activationKeyword, ignoreCase = true)) {
+                        Timber.i("Matching keyword")
                         isActivated = true
                         callback?.onKeywordDetected()
                         return@forEach
