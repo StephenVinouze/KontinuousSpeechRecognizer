@@ -1,8 +1,7 @@
-package com.github.stephenvinouze.speechrecognizer
+package com.github.stephenvinouze.speechrecognizer.activities
 
 import android.content.Intent
 import android.os.Bundle
-import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.support.v7.app.AppCompatActivity
@@ -13,9 +12,11 @@ import android.widget.ToggleButton
 import butterknife.BindView
 import butterknife.ButterKnife
 import com.afollestad.materialdialogs.MaterialDialog
+import com.github.stephenvinouze.speechrecognizer.R
+import com.github.stephenvinouze.speechrecognizer.services.RecognitionManager
 import timber.log.Timber
 
-class MainActivity : AppCompatActivity(), RecognitionListener {
+class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback {
 
     @BindView(R.id.textView1)
     lateinit var returnedText: TextView
@@ -26,43 +27,27 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
     @BindView(R.id.progressBar1)
     lateinit var progressBar: ProgressBar
 
-    private var speech: SpeechRecognizer? = null
+    lateinit var recognitionManager: RecognitionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         ButterKnife.bind(this)
 
+        toggleButton.visibility = View.INVISIBLE
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
-        if (SpeechRecognizer.isRecognitionAvailable(this)) {
-            speech = SpeechRecognizer.createSpeechRecognizer(this)
-            speech?.setRecognitionListener(this)
-
-            toggleButton.setOnCheckedChangeListener { _, isChecked ->
-                if (isChecked) {
-                    startRecognition()
-                } else {
-                    stopRecognition()
-                }
-            }
-        } else {
-            MaterialDialog.Builder(this)
-                    .title("Speech Recognizer unavailable")
-                    .content("Your device does not support Speech Recognition. Sorry!")
-                    .positiveText(android.R.string.ok)
-                    .show()
-        }
+        recognitionManager = RecognitionManager(this, buildRecognizerIntent(), this)
     }
 
     override fun onDestroy() {
-        speech?.destroy()
+        recognitionManager.destroyRecognition()
         super.onDestroy()
     }
 
     override fun onPause() {
-        stopRecognition()
+        recognitionManager.stopRecognition()
         super.onPause()
     }
 
@@ -78,29 +63,28 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
     private fun startRecognition() {
         toggleButton.isChecked = true
         progressBar.visibility = View.VISIBLE
-        progressBar.isIndeterminate = true
-        speech?.startListening(buildRecognizerIntent())
+        recognitionManager.startRecognition()
     }
 
     private fun stopRecognition() {
         toggleButton.isChecked = false
-        progressBar.isIndeterminate = false
+        progressBar.isIndeterminate = true
         progressBar.visibility = View.INVISIBLE
-        speech?.stopListening()
+        recognitionManager.stopRecognition()
     }
 
     private fun getErrorText(errorCode: Int): String {
         when (errorCode) {
-            SpeechRecognizer.ERROR_AUDIO -> return  "Audio recording error"
-            SpeechRecognizer.ERROR_CLIENT -> return  "Client side error"
-            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> return  "Insufficient permissions"
-            SpeechRecognizer.ERROR_NETWORK -> return  "Network error"
-            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> return  "Network timeout"
-            SpeechRecognizer.ERROR_NO_MATCH -> return  "No match"
+            SpeechRecognizer.ERROR_AUDIO -> return "Audio recording error"
+            SpeechRecognizer.ERROR_CLIENT -> return "Client side error"
+            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> return "Insufficient permissions"
+            SpeechRecognizer.ERROR_NETWORK -> return "Network error"
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> return "Network timeout"
+            SpeechRecognizer.ERROR_NO_MATCH -> return "No match"
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> return "RecognitionService busy"
-            SpeechRecognizer.ERROR_SERVER -> return  "Error from server"
-            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> return  "No speech input"
-            else -> return  "Didn't understand, please try again."
+            SpeechRecognizer.ERROR_SERVER -> return "Error from server"
+            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> return "No speech input"
+            else -> return "Didn't understand, please try again."
         }
     }
 
@@ -115,8 +99,6 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
 
     override fun onEndOfSpeech() {
         Timber.i("onEndOfSpeech")
-        progressBar.isIndeterminate = true
-        toggleButton.isChecked = false
     }
 
     override fun onError(errorCode: Int) {
@@ -130,29 +112,43 @@ class MainActivity : AppCompatActivity(), RecognitionListener {
         Timber.i("onEvent")
     }
 
-    override fun onPartialResults(partialResults: Bundle) {
-        Timber.i("onPartialResults")
-    }
-
     override fun onReadyForSpeech(params: Bundle) {
         Timber.i("onReadyForSpeech")
     }
 
-    override fun onResults(results: Bundle) {
-        val matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        var text = ""
-        if (matches != null) {
-            for (result in matches)
-                text += result + "\n"
-        }
-        Timber.i("onResults : %s", text)
-
-        returnedText.text = text
+    override fun onRmsChanged(rmsdB: Float) {
+        progressBar.progress = rmsdB.toInt()
     }
 
-    override fun onRmsChanged(rmsdB: Float) {
-        Timber.i("onRmsChanged: %f", rmsdB)
-        progressBar.progress = rmsdB.toInt()
+    override fun onPrepared(status: RecognitionManager.RecognitionStatus) {
+        when (status) {
+            RecognitionManager.RecognitionStatus.SUCCESS -> {
+                toggleButton.visibility = View.VISIBLE
+                toggleButton.setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        startRecognition()
+                    } else {
+                        stopRecognition()
+                    }
+                }
+            }
+            RecognitionManager.RecognitionStatus.FAILURE,
+            RecognitionManager.RecognitionStatus.UNAVAILABLE -> {
+                MaterialDialog.Builder(this)
+                        .title("Speech Recognizer unavailable")
+                        .content("Your device does not support Speech Recognition. Sorry!")
+                        .positiveText(android.R.string.ok)
+                        .show()
+            }
+        }
+    }
+
+    override fun onPartialResults(results: List<String>) {}
+
+    override fun onResults(results: List<String>, scores: FloatArray?) {
+        val text = results.joinToString(separator = "\n")
+        Timber.i("onResults : %s", text)
+        returnedText.text = text
     }
 
 }
