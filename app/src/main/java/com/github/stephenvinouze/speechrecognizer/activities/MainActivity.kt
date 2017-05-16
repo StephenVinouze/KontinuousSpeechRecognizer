@@ -38,12 +38,17 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
-        recognitionManager = RecognitionManager(this, buildRecognizerIntent(), this)
+        recognitionManager = RecognitionManager(this, "OK chef", buildRecognizerIntent(), this)
     }
 
     override fun onDestroy() {
-        recognitionManager.destroyRecognition()
+        recognitionManager.destroyRecognizer()
         super.onDestroy()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        recognitionManager.startRecognition()
     }
 
     override fun onPause() {
@@ -123,14 +128,15 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
     override fun onPrepared(status: RecognitionManager.RecognitionStatus) {
         when (status) {
             RecognitionManager.RecognitionStatus.SUCCESS -> {
-                toggleButton.visibility = View.VISIBLE
+/*                toggleButton.visibility = View.VISIBLE
                 toggleButton.setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         startRecognition()
                     } else {
                         stopRecognition()
                     }
-                }
+                }*/
+                returnedText.text = "Recognition ready"
             }
             RecognitionManager.RecognitionStatus.FAILURE,
             RecognitionManager.RecognitionStatus.UNAVAILABLE -> {
@@ -141,6 +147,10 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
                         .show()
             }
         }
+    }
+
+    override fun onKeywordDetected() {
+        returnedText.text = "Keyword detected"
     }
 
     override fun onPartialResults(results: List<String>) {}

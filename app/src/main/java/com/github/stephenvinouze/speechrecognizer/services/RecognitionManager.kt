@@ -9,13 +9,36 @@ import android.speech.SpeechRecognizer
 /**
  * Created by stephenvinouze on 16/05/2017.
  */
-class RecognitionManager(context: Context,
+class RecognitionManager(private val context: Context,
+                         private val activationKeyword: String,
                          private val recognizerIntent: Intent,
                          private val callback: RecognitionCallback? = null): RecognitionListener {
 
+    private var isActivated: Boolean = false
     private var speech: SpeechRecognizer? = null
 
     init {
+        initializeRecognizer()
+    }
+
+    fun startRecognition() {
+        cancelRecognition()
+        speech?.startListening(recognizerIntent)
+    }
+
+    fun stopRecognition() {
+        speech?.stopListening()
+    }
+
+    fun cancelRecognition() {
+        speech?.cancel()
+    }
+
+    fun destroyRecognizer() {
+        speech?.destroy()
+    }
+
+    private fun initializeRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
             speech = SpeechRecognizer.createSpeechRecognizer(context)
             speech?.setRecognitionListener(this)
@@ -25,25 +48,20 @@ class RecognitionManager(context: Context,
         }
     }
 
-    fun startRecognition() {
-        speech?.cancel()
-        speech?.startListening(recognizerIntent)
-    }
-
-    fun stopRecognition() {
-        speech?.stopListening()
-    }
-
-    fun destroyRecognition() {
-        speech?.destroy()
-    }
-
     override fun onBeginningOfSpeech() {
         callback?.onBeginningOfSpeech()
     }
 
+    override fun onReadyForSpeech(params: Bundle) {
+        callback?.onReadyForSpeech(params)
+    }
+
     override fun onBufferReceived(buffer: ByteArray) {
         callback?.onBufferReceived(buffer)
+    }
+
+    override fun onRmsChanged(rmsdB: Float) {
+        callback?.onRmsChanged(rmsdB)
     }
 
     override fun onEndOfSpeech() {
@@ -51,7 +69,16 @@ class RecognitionManager(context: Context,
     }
 
     override fun onError(errorCode: Int) {
-        callback?.onError(errorCode)
+        if (isActivated) {
+            callback?.onError(errorCode)
+        }
+
+        when (errorCode) {
+            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                destroyRecognizer()
+                initializeRecognizer()
+            }
+        }
 
         startRecognition()
     }
@@ -67,27 +94,31 @@ class RecognitionManager(context: Context,
         }
     }
 
-    override fun onReadyForSpeech(params: Bundle) {
-        callback?.onReadyForSpeech(params)
-    }
-
     override fun onResults(results: Bundle) {
         val matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
         val scores = results.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
         if (matches != null) {
-            callback?.onResults(matches, scores)
+            if (isActivated) {
+                isActivated = false
+                callback?.onResults(matches, scores)
+            } else {
+                matches.forEach {
+                    if (it.contains(other = activationKeyword, ignoreCase = true)) {
+                        isActivated = true
+                        callback?.onKeywordDetected()
+                        return@forEach
+                    }
+                }
+            }
         }
 
         startRecognition()
     }
 
-    override fun onRmsChanged(rmsdB: Float) {
-        callback?.onRmsChanged(rmsdB)
-    }
-
     interface RecognitionCallback {
         fun onPrepared(status: RecognitionStatus)
         fun onBeginningOfSpeech()
+        fun onKeywordDetected()
         fun onReadyForSpeech(params: Bundle)
         fun onBufferReceived(buffer: ByteArray)
         fun onRmsChanged(rmsdB: Float)
