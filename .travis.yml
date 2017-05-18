@@ -1,0 +1,20 @@
+language: android
+android:
+  components:
+    - tools
+    - platform-tools
+    - build-tools-25.0.3
+    - android-25
+    - extra-android-m2repository
+
+jdk: oraclejdk8
+
+notifications:
+  email: false
+
+env:
+    - GRADLE_OPTS="-Xmx2048M -XX:MaxPermSize=2048m"
+
+script:
+  # By default Travis-ci executes './gradlew build connectedCheck' if no 'script:' section found.
+  - ./gradlew build
