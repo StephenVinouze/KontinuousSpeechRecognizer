@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.os.Bundle
 import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import timber.log.Timber
 
@@ -13,9 +14,9 @@ import timber.log.Timber
  */
 class RecognitionManager(private val context: Context,
                          private val activationKeyword: String,
-                         private val recognizerIntent: Intent,
                          private val callback: RecognitionCallback? = null) : RecognitionListener {
 
+    var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
     var shouldMute: Boolean = false
 
     private var isActivated: Boolean = false
@@ -23,6 +24,11 @@ class RecognitionManager(private val context: Context,
     private var audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     init {
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+
         initializeRecognizer()
     }
 

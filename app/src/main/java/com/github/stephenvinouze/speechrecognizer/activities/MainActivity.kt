@@ -1,8 +1,6 @@
 package com.github.stephenvinouze.speechrecognizer.activities
 
-import android.content.Intent
 import android.os.Bundle
-import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.support.v7.app.AppCompatActivity
 import android.view.View
@@ -38,7 +36,7 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
-        recognitionManager = RecognitionManager(this, "OK chef", buildRecognizerIntent(), this)
+        recognitionManager = RecognitionManager(this, "OK chef", this)
     }
 
     override fun onDestroy() {
@@ -54,15 +52,6 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
     override fun onPause() {
         recognitionManager.stopRecognition()
         super.onPause()
-    }
-
-    private fun buildRecognizerIntent(): Intent {
-        val recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
-        recognizerIntent.putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
-        recognizerIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
-        recognizerIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-        return recognizerIntent
     }
 
     private fun startRecognition() {
