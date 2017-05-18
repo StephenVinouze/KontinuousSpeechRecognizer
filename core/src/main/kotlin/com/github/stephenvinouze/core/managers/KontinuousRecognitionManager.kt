@@ -15,10 +15,10 @@ import com.github.stephenvinouze.core.models.RecognitionStatus
  */
 class KontinuousRecognitionManager(private val context: Context,
                                    private val activationKeyword: String,
+                                   private val shouldMute: Boolean? = false,
                                    private val callback: RecognitionCallback? = null) : RecognitionListener {
 
     var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-    var shouldMute: Boolean = false
 
     private var isActivated: Boolean = false
     private var isListening: Boolean = false
@@ -75,7 +75,7 @@ class KontinuousRecognitionManager(private val context: Context,
     }
 
     override fun onReadyForSpeech(params: Bundle) {
-        muteRecognition(shouldMute || !isActivated)
+        muteRecognition((shouldMute != null && shouldMute) || !isActivated)
         callback?.onReadyForSpeech(params)
     }
 
