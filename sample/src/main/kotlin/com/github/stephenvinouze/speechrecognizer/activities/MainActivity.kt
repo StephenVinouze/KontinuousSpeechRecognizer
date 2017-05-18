@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity(), RecognitionCallback, PermissionListene
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
-        recognitionManager = KontinuousRecognitionManager(this, ACTIVATION_KEYWORD, this)
+        recognitionManager = KontinuousRecognitionManager(this, activationKeyword = ACTIVATION_KEYWORD, callback = this)
 
         Dexter.withActivity(this)
                 .withPermission(Manifest.permission.RECORD_AUDIO)
