@@ -1,7 +1,10 @@
 package com.github.stephenvinouze.speechrecognizer.activities
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.SpeechRecognizer
+import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.widget.ProgressBar
@@ -9,16 +12,31 @@ import android.widget.TextView
 import butterknife.BindView
 import butterknife.ButterKnife
 import com.afollestad.materialdialogs.MaterialDialog
+import com.github.stephenvinouze.core.interfaces.RecognitionCallback
 import com.github.stephenvinouze.core.managers.KontinuousRecognitionManager
+import com.github.stephenvinouze.core.models.RecognitionStatus
 import com.github.stephenvinouze.speechrecognizer.R
+import com.karumi.dexter.Dexter
+import com.karumi.dexter.PermissionToken
+import com.karumi.dexter.listener.PermissionDeniedResponse
+import com.karumi.dexter.listener.PermissionGrantedResponse
+import com.karumi.dexter.listener.PermissionRequest
+import com.karumi.dexter.listener.single.PermissionListener
 import timber.log.Timber
 
-class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.RecognitionCallback {
+class MainActivity : AppCompatActivity(), RecognitionCallback, PermissionListener {
 
-    @BindView(R.id.textView1)
+    companion object {
+        /**
+         * Put any keyword that will trigger the speech recognition
+         */
+        private const val ACTIVATION_KEYWORD = "OK chef"
+    }
+
+    @BindView(R.id.textView)
     lateinit var returnedText: TextView
 
-    @BindView(R.id.progressBar1)
+    @BindView(R.id.progressBar)
     lateinit var progressBar: ProgressBar
 
     lateinit var recognitionManager: KontinuousRecognitionManager
@@ -31,7 +49,12 @@ class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.Recogniti
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
-        recognitionManager = KontinuousRecognitionManager(this, "OK chef", this)
+        recognitionManager = KontinuousRecognitionManager(this, ACTIVATION_KEYWORD, this)
+
+        Dexter.withActivity(this)
+                .withPermission(Manifest.permission.RECORD_AUDIO)
+                .withListener(this)
+                .check()
     }
 
     override fun onDestroy() {
@@ -41,7 +64,10 @@ class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.Recogniti
 
     override fun onResume() {
         super.onResume()
-        startRecognition()
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            startRecognition()
+        }
     }
 
     override fun onPause() {
@@ -50,6 +76,7 @@ class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.Recogniti
     }
 
     private fun startRecognition() {
+        progressBar.isIndeterminate = false
         progressBar.visibility = View.VISIBLE
         recognitionManager.startRecognition()
     }
@@ -77,7 +104,6 @@ class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.Recogniti
 
     override fun onBeginningOfSpeech() {
         Timber.i("onBeginningOfSpeech")
-        progressBar.isIndeterminate = false
     }
 
     override fun onBufferReceived(buffer: ByteArray) {
@@ -106,14 +132,14 @@ class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.Recogniti
         progressBar.progress = rmsdB.toInt()
     }
 
-    override fun onPrepared(status: KontinuousRecognitionManager.RecognitionStatus) {
+    override fun onPrepared(status: RecognitionStatus) {
         when (status) {
-            KontinuousRecognitionManager.RecognitionStatus.SUCCESS -> {
+            RecognitionStatus.SUCCESS -> {
                 Timber.i("onPrepared: Success")
                 returnedText.text = "Recognition ready"
             }
-            KontinuousRecognitionManager.RecognitionStatus.FAILURE,
-            KontinuousRecognitionManager.RecognitionStatus.UNAVAILABLE -> {
+            RecognitionStatus.FAILURE,
+            RecognitionStatus.UNAVAILABLE -> {
                 Timber.i("onPrepared: Failure or unavailable")
                 MaterialDialog.Builder(this)
                         .title("Speech Recognizer unavailable")
@@ -135,6 +161,18 @@ class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.Recogniti
         val text = results.joinToString(separator = "\n")
         Timber.i("onResults : %s", text)
         returnedText.text = text
+    }
+
+    override fun onPermissionGranted(response: PermissionGrantedResponse?) {
+        startRecognition()
+    }
+
+    override fun onPermissionRationaleShouldBeShown(permission: PermissionRequest?, token: PermissionToken?) {
+
+    }
+
+    override fun onPermissionDenied(response: PermissionDeniedResponse?) {
+
     }
 
 }

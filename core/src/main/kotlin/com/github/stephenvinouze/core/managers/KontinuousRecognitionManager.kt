@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import com.github.stephenvinouze.core.interfaces.RecognitionCallback
+import com.github.stephenvinouze.core.models.RecognitionStatus
 
 /**
  * Created by stephenvinouze on 16/05/2017.
@@ -19,6 +21,7 @@ class KontinuousRecognitionManager(private val context: Context,
     var shouldMute: Boolean = false
 
     private var isActivated: Boolean = false
+    private var isListening: Boolean = false
     private var speech: SpeechRecognizer? = null
     private var audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
@@ -31,23 +34,6 @@ class KontinuousRecognitionManager(private val context: Context,
         initializeRecognizer()
     }
 
-    fun startRecognition() {
-        speech?.startListening(recognizerIntent)
-    }
-
-    fun stopRecognition() {
-        speech?.stopListening()
-    }
-
-    fun cancelRecognition() {
-        speech?.cancel()
-    }
-
-    fun destroyRecognizer() {
-        muteRecognition(false)
-        speech?.destroy()
-    }
-
     private fun initializeRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
             speech = SpeechRecognizer.createSpeechRecognizer(context)
@@ -56,6 +42,26 @@ class KontinuousRecognitionManager(private val context: Context,
         } else {
             callback?.onPrepared(RecognitionStatus.UNAVAILABLE)
         }
+    }
+
+    fun destroyRecognizer() {
+        muteRecognition(false)
+        speech?.destroy()
+    }
+
+    fun startRecognition() {
+        if (!isListening) {
+            isListening = true
+            speech?.startListening(recognizerIntent)
+        }
+    }
+
+    fun stopRecognition() {
+        speech?.stopListening()
+    }
+
+    fun cancelRecognition() {
+        speech?.cancel()
     }
 
     private fun muteRecognition(mute: Boolean) {
@@ -90,6 +96,7 @@ class KontinuousRecognitionManager(private val context: Context,
             callback?.onError(errorCode)
         }
         isActivated = false
+        isListening = false
 
         when (errorCode) {
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> cancelRecognition()
@@ -108,7 +115,7 @@ class KontinuousRecognitionManager(private val context: Context,
 
     override fun onPartialResults(partialResults: Bundle) {
         val matches = partialResults.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-        if (matches != null) {
+        if (isActivated && matches != null) {
             callback?.onPartialResults(matches)
         }
     }
@@ -131,25 +138,8 @@ class KontinuousRecognitionManager(private val context: Context,
             }
         }
 
+        isListening = false
         startRecognition()
-    }
-
-    interface RecognitionCallback {
-        fun onPrepared(status: RecognitionStatus)
-        fun onBeginningOfSpeech()
-        fun onKeywordDetected()
-        fun onReadyForSpeech(params: Bundle)
-        fun onBufferReceived(buffer: ByteArray)
-        fun onRmsChanged(rmsdB: Float)
-        fun onPartialResults(results: List<String>)
-        fun onResults(results: List<String>, scores: FloatArray?)
-        fun onError(errorCode: Int)
-        fun onEvent(eventType: Int, params: Bundle)
-        fun onEndOfSpeech()
-    }
-
-    enum class RecognitionStatus {
-        SUCCESS, FAILURE, UNAVAILABLE
     }
 
 }

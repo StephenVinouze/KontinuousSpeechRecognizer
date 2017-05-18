@@ -46,4 +46,5 @@ dependencies {
     kapt "com.jakewharton:butterknife-compiler:$butterknife_version"
 
     compile 'com.afollestad.material-dialogs:core:0.9.4.4'
+    compile 'com.karumi:dexter:4.1.0'
 }
