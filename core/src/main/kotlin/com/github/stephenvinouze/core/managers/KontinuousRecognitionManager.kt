@@ -1,4 +1,4 @@
-package com.github.stephenvinouze.speechrecognizer.services
+package com.github.stephenvinouze.core.managers
 
 import android.content.Context
 import android.content.Intent
@@ -7,14 +7,13 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import timber.log.Timber
 
 /**
  * Created by stephenvinouze on 16/05/2017.
  */
-class RecognitionManager(private val context: Context,
-                         private val activationKeyword: String,
-                         private val callback: RecognitionCallback? = null) : RecognitionListener {
+class KontinuousRecognitionManager(private val context: Context,
+                                   private val activationKeyword: String,
+                                   private val callback: RecognitionCallback? = null) : RecognitionListener {
 
     var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
     var shouldMute: Boolean = false
@@ -123,9 +122,7 @@ class RecognitionManager(private val context: Context,
                 callback?.onResults(matches, scores)
             } else {
                 matches.forEach {
-                    Timber.i("Keyword found : %s", it)
                     if (it.contains(other = activationKeyword, ignoreCase = true)) {
-                        Timber.i("Matching keyword")
                         isActivated = true
                         callback?.onKeywordDetected()
                         return@forEach

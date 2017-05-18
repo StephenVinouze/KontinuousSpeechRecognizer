@@ -6,37 +6,32 @@ import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.ToggleButton
 import butterknife.BindView
 import butterknife.ButterKnife
 import com.afollestad.materialdialogs.MaterialDialog
+import com.github.stephenvinouze.core.managers.KontinuousRecognitionManager
 import com.github.stephenvinouze.speechrecognizer.R
-import com.github.stephenvinouze.speechrecognizer.services.RecognitionManager
 import timber.log.Timber
 
-class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback {
+class MainActivity : AppCompatActivity(), KontinuousRecognitionManager.RecognitionCallback {
 
     @BindView(R.id.textView1)
     lateinit var returnedText: TextView
 
-    @BindView(R.id.toggleButton1)
-    lateinit var toggleButton: ToggleButton
-
     @BindView(R.id.progressBar1)
     lateinit var progressBar: ProgressBar
 
-    lateinit var recognitionManager: RecognitionManager
+    lateinit var recognitionManager: KontinuousRecognitionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         ButterKnife.bind(this)
 
-        toggleButton.visibility = View.INVISIBLE
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
-        recognitionManager = RecognitionManager(this, "OK chef", this)
+        recognitionManager = KontinuousRecognitionManager(this, "OK chef", this)
     }
 
     override fun onDestroy() {
@@ -46,22 +41,20 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
 
     override fun onResume() {
         super.onResume()
-        recognitionManager.startRecognition()
+        startRecognition()
     }
 
     override fun onPause() {
-        recognitionManager.stopRecognition()
+        stopRecognition()
         super.onPause()
     }
 
     private fun startRecognition() {
-        toggleButton.isChecked = true
         progressBar.visibility = View.VISIBLE
         recognitionManager.startRecognition()
     }
 
     private fun stopRecognition() {
-        toggleButton.isChecked = false
         progressBar.isIndeterminate = true
         progressBar.visibility = View.INVISIBLE
         recognitionManager.stopRecognition()
@@ -97,9 +90,8 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
 
     override fun onError(errorCode: Int) {
         val errorMessage = getErrorText(errorCode)
-        Timber.d("FAILED %s", errorMessage)
+        Timber.d("onError: %s", errorMessage)
         returnedText.text = errorMessage
-        toggleButton.isChecked = false
     }
 
     override fun onEvent(eventType: Int, params: Bundle) {
@@ -114,21 +106,15 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
         progressBar.progress = rmsdB.toInt()
     }
 
-    override fun onPrepared(status: RecognitionManager.RecognitionStatus) {
+    override fun onPrepared(status: KontinuousRecognitionManager.RecognitionStatus) {
         when (status) {
-            RecognitionManager.RecognitionStatus.SUCCESS -> {
-/*                toggleButton.visibility = View.VISIBLE
-                toggleButton.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        startRecognition()
-                    } else {
-                        stopRecognition()
-                    }
-                }*/
+            KontinuousRecognitionManager.RecognitionStatus.SUCCESS -> {
+                Timber.i("onPrepared: Success")
                 returnedText.text = "Recognition ready"
             }
-            RecognitionManager.RecognitionStatus.FAILURE,
-            RecognitionManager.RecognitionStatus.UNAVAILABLE -> {
+            KontinuousRecognitionManager.RecognitionStatus.FAILURE,
+            KontinuousRecognitionManager.RecognitionStatus.UNAVAILABLE -> {
+                Timber.i("onPrepared: Failure or unavailable")
                 MaterialDialog.Builder(this)
                         .title("Speech Recognizer unavailable")
                         .content("Your device does not support Speech Recognition. Sorry!")
@@ -139,6 +125,7 @@ class MainActivity : AppCompatActivity(), RecognitionManager.RecognitionCallback
     }
 
     override fun onKeywordDetected() {
+        Timber.i("keyword detected !!!")
         returnedText.text = "Keyword detected"
     }
 
