@@ -21,7 +21,7 @@ Then add the following dependency in your project.
 
 ```gradle
 dependencies {
-  compile "com.github.StephenVinouze.KontinuousSpeechRecognizer:core:1.0.2"
+  compile "com.github.StephenVinouze:KontinuousSpeechRecognizer:1.0.2"
 }
 ```
 
