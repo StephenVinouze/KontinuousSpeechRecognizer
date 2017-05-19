@@ -1,4 +1,4 @@
-package com.github.stephenvinouze.speechrecognizer
+package com.github.stephenvinouze.kontinuousspeechrecognizer
 
 import android.support.test.InstrumentationRegistry
 import android.support.test.runner.AndroidJUnit4

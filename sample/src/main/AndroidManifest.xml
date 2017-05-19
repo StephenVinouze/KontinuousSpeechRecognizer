@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.github.stephenvinouze.speechrecognizer">
+    package="com.github.stephenvinouze.kontinuousspeechrecognizer">
 
     <application
-        android:name=".MainApplication"
+        android:name="com.github.stephenvinouze.kontinuousspeechrecognizer.MainApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -11,7 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".activities.MainActivity"
+            android:name="com.github.stephenvinouze.kontinuousspeechrecognizer.activities.MainActivity"
             android:configChanges="orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

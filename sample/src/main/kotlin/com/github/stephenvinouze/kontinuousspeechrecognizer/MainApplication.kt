@@ -1,4 +1,4 @@
-package com.github.stephenvinouze.speechrecognizer
+package com.github.stephenvinouze.kontinuousspeechrecognizer
 
 import android.app.Application
 import timber.log.Timber

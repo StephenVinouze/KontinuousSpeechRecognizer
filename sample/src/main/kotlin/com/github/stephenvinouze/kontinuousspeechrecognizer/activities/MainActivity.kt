@@ -1,9 +1,10 @@
-package com.github.stephenvinouze.speechrecognizer.activities
+package com.github.stephenvinouze.kontinuousspeechrecognizer.activities
 
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.SpeechRecognizer
+import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.view.View
@@ -15,22 +16,17 @@ import com.afollestad.materialdialogs.MaterialDialog
 import com.github.stephenvinouze.core.interfaces.RecognitionCallback
 import com.github.stephenvinouze.core.managers.KontinuousRecognitionManager
 import com.github.stephenvinouze.core.models.RecognitionStatus
-import com.github.stephenvinouze.speechrecognizer.R
-import com.karumi.dexter.Dexter
-import com.karumi.dexter.PermissionToken
-import com.karumi.dexter.listener.PermissionDeniedResponse
-import com.karumi.dexter.listener.PermissionGrantedResponse
-import com.karumi.dexter.listener.PermissionRequest
-import com.karumi.dexter.listener.single.PermissionListener
+import com.github.stephenvinouze.kontinuousspeechrecognizer.R
 import timber.log.Timber
 
-class MainActivity : AppCompatActivity(), RecognitionCallback, PermissionListener {
+class MainActivity : AppCompatActivity(), RecognitionCallback {
 
     companion object {
         /**
          * Put any keyword that will trigger the speech recognition
          */
-        private const val ACTIVATION_KEYWORD = "OK chef"
+        private const val ACTIVATION_KEYWORD = "OK test"
+        private const val RECORD_AUDIO_REQUEST_CODE = 101
     }
 
     @BindView(R.id.textView)
@@ -51,10 +47,9 @@ class MainActivity : AppCompatActivity(), RecognitionCallback, PermissionListene
 
         recognitionManager = KontinuousRecognitionManager(this, activationKeyword = ACTIVATION_KEYWORD, callback = this)
 
-        Dexter.withActivity(this)
-                .withPermission(Manifest.permission.RECORD_AUDIO)
-                .withListener(this)
-                .check()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), RECORD_AUDIO_REQUEST_CODE)
+        }
     }
 
     override fun onDestroy() {
@@ -163,16 +158,15 @@ class MainActivity : AppCompatActivity(), RecognitionCallback, PermissionListene
         returnedText.text = text
     }
 
-    override fun onPermissionGranted(response: PermissionGrantedResponse?) {
-        startRecognition()
-    }
-
-    override fun onPermissionRationaleShouldBeShown(permission: PermissionRequest?, token: PermissionToken?) {
-
-    }
-
-    override fun onPermissionDenied(response: PermissionDeniedResponse?) {
-
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            RECORD_AUDIO_REQUEST_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    startRecognition()
+                }
+            }
+        }
     }
 
 }
