@@ -2,6 +2,7 @@
 [![Release](https://jitpack.io/v/StephenVinouze/KontinuousSpeechRecognizer.svg)](https://jitpack.io/#StephenVinouze/KontinuousSpeechRecognizer)
 [![Build Status](https://travis-ci.org/StephenVinouze/KontinuousSpeechRecognizer.svg?branch=master)](https://travis-ci.org/StephenVinouze/KontinuousSpeechRecognizer)
 [![API](https://img.shields.io/badge/API-14%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=14)
+[![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-KontinuousSpeechRecognizer-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/5790)
 [![GitHub
 license](http://img.shields.io/badge/license-APACHE2-blue.svg)](https://github.com/StephenVinouze/KontinuousSpeechRecognizer/blob/master/LICENSE)
 
