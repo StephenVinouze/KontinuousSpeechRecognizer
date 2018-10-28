@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import com.github.stephenvinouze.core.interfaces.RecognitionCallback
 import com.github.stephenvinouze.core.models.RecognitionStatus
 
@@ -125,8 +126,27 @@ class KontinuousRecognitionManager(private val context: Context,
             }
         }
 
+        Log.i("Recognition", getErrorText(errorCode))
+
         startRecognition()
     }
+
+    private fun getErrorText(errorCode: Int): String {
+        val errorMsg = when (errorCode) {
+            SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+            SpeechRecognizer.ERROR_CLIENT -> "Client side error"
+            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
+            SpeechRecognizer.ERROR_NETWORK -> "Network error"
+            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+            SpeechRecognizer.ERROR_NO_MATCH -> "No match"
+            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "RecognitionService busy"
+            SpeechRecognizer.ERROR_SERVER -> "error from server"
+            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input"
+            else -> "Didn't understand, please try again."
+        }
+        return "SpeechRecognizer error: $errorMsg"
+    }
+
 
     override fun onEvent(eventType: Int, params: Bundle) {
         callback?.onEvent(eventType, params)
