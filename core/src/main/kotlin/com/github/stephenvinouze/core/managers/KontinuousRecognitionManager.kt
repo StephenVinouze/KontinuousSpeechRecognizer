@@ -14,12 +14,14 @@ import com.github.stephenvinouze.core.models.RecognitionStatus
 /**
  * Created by stephenvinouze on 16/05/2017.
  */
-class KontinuousRecognitionManager(private val context: Context,
-                                   private val activationKeyword: String,
-                                   private val shouldMute: Boolean? = false,
-                                   private val callback: RecognitionCallback? = null) : RecognitionListener {
+class KontinuousRecognitionManager(
+        private val context: Context,
+        private val activationKeyword: String,
+        private val shouldMute: Boolean? = false,
+        private val callback: RecognitionCallback? = null
+) : RecognitionListener {
 
-    var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    private var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
 
     private var isActivated: Boolean = false
     private var isListening: Boolean = false
