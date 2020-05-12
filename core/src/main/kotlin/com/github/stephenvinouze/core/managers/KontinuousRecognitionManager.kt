@@ -8,26 +8,26 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import androidx.core.content.getSystemService
 import com.github.stephenvinouze.core.interfaces.RecognitionCallback
 import com.github.stephenvinouze.core.models.RecognitionStatus
 
 /**
  * Created by stephenvinouze on 16/05/2017.
  */
-class KontinuousRecognitionManager(private val context: Context,
-                                   private val activationKeyword: String,
-                                   private val shouldMute: Boolean? = false,
-                                   private val callback: RecognitionCallback? = null) : RecognitionListener {
-
-    var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+class KontinuousRecognitionManager(
+        private val context: Context,
+        private val activationKeyword: String,
+        private val shouldMute: Boolean = false,
+        private val callback: RecognitionCallback? = null
+) : RecognitionListener {
 
     private var isActivated: Boolean = false
-    private var isListening: Boolean = false
-    private var speech: SpeechRecognizer? = null
-    private var audioManager: AudioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val speech: SpeechRecognizer by lazy { SpeechRecognizer.createSpeechRecognizer(context) }
+    private val audioManager: AudioManager? = context.getSystemService()
 
-    init {
-        recognizerIntent.run {
+    private val recognizerIntent by lazy {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
@@ -35,15 +35,12 @@ class KontinuousRecognitionManager(private val context: Context,
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             }
         }
-
-        initializeRecognizer()
     }
 
-    private fun initializeRecognizer() {
+    fun createRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
-            speech = SpeechRecognizer.createSpeechRecognizer(context)
-            speech?.setRecognitionListener(this)
-            callback?.onPrepared(if (speech != null) RecognitionStatus.SUCCESS else RecognitionStatus.FAILURE)
+            speech.setRecognitionListener(this)
+            callback?.onPrepared(RecognitionStatus.SUCCESS)
         } else {
             callback?.onPrepared(RecognitionStatus.UNAVAILABLE)
         }
@@ -51,40 +48,37 @@ class KontinuousRecognitionManager(private val context: Context,
 
     fun destroyRecognizer() {
         muteRecognition(false)
-        speech?.destroy()
+        speech.destroy()
     }
 
     fun startRecognition() {
-        if (!isListening) {
-            isListening = true
-            speech?.startListening(recognizerIntent)
-        }
+        speech.startListening(recognizerIntent)
     }
 
     fun stopRecognition() {
-        speech?.stopListening()
+        speech.stopListening()
     }
 
     fun cancelRecognition() {
-        speech?.cancel()
+        speech.cancel()
     }
 
     @Suppress("DEPRECATION")
     private fun muteRecognition(mute: Boolean) {
-        audioManager.run {
+        audioManager?.let {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 val flag = if (mute) AudioManager.ADJUST_MUTE else AudioManager.ADJUST_UNMUTE
-                adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, flag, 0)
-                adjustStreamVolume(AudioManager.STREAM_ALARM, flag, 0)
-                adjustStreamVolume(AudioManager.STREAM_MUSIC, flag, 0)
-                adjustStreamVolume(AudioManager.STREAM_RING, flag, 0)
-                adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0)
+                it.adjustStreamVolume(AudioManager.STREAM_NOTIFICATION, flag, 0)
+                it.adjustStreamVolume(AudioManager.STREAM_ALARM, flag, 0)
+                it.adjustStreamVolume(AudioManager.STREAM_MUSIC, flag, 0)
+                it.adjustStreamVolume(AudioManager.STREAM_RING, flag, 0)
+                it.adjustStreamVolume(AudioManager.STREAM_SYSTEM, flag, 0)
             } else {
-                setStreamMute(AudioManager.STREAM_NOTIFICATION, mute)
-                setStreamMute(AudioManager.STREAM_ALARM, mute)
-                setStreamMute(AudioManager.STREAM_MUSIC, mute)
-                setStreamMute(AudioManager.STREAM_RING, mute)
-                setStreamMute(AudioManager.STREAM_SYSTEM, mute)
+                it.setStreamMute(AudioManager.STREAM_NOTIFICATION, mute)
+                it.setStreamMute(AudioManager.STREAM_ALARM, mute)
+                it.setStreamMute(AudioManager.STREAM_MUSIC, mute)
+                it.setStreamMute(AudioManager.STREAM_RING, mute)
+                it.setStreamMute(AudioManager.STREAM_SYSTEM, mute)
             }
         }
     }
@@ -94,7 +88,7 @@ class KontinuousRecognitionManager(private val context: Context,
     }
 
     override fun onReadyForSpeech(params: Bundle) {
-        muteRecognition((shouldMute != null && shouldMute) || !isActivated)
+        muteRecognition(shouldMute || !isActivated)
         callback?.onReadyForSpeech(params)
     }
 
@@ -115,13 +109,12 @@ class KontinuousRecognitionManager(private val context: Context,
             callback?.onError(errorCode)
         }
         isActivated = false
-        isListening = false
 
         when (errorCode) {
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> cancelRecognition()
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                 destroyRecognizer()
-                initializeRecognizer()
+                createRecognizer()
             }
         }
 
@@ -146,19 +139,16 @@ class KontinuousRecognitionManager(private val context: Context,
             if (isActivated) {
                 isActivated = false
                 callback?.onResults(matches, scores)
+                stopRecognition()
             } else {
-                matches.forEach {
-                    if (it.contains(other = activationKeyword, ignoreCase = true)) {
-                        isActivated = true
-                        callback?.onKeywordDetected()
-                        return@forEach
-                    }
-                }
+                matches.firstOrNull { it.contains(other = activationKeyword, ignoreCase = true) }
+                        ?.let {
+                            isActivated = true
+                            callback?.onKeywordDetected()
+                        }
+                startRecognition()
             }
         }
-
-        isListening = false
-        startRecognition()
     }
 
 }

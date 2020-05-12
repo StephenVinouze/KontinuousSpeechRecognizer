@@ -4,10 +4,10 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.SpeechRecognizer
-import android.support.v4.app.ActivityCompat
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AlertDialog
-import android.support.v7.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import com.github.stephenvinouze.core.interfaces.RecognitionCallback
@@ -36,6 +36,8 @@ class MainActivity : AppCompatActivity(), RecognitionCallback {
 
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
+
+        recognitionManager.createRecognizer()
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), RECORD_AUDIO_REQUEST_CODE)
@@ -121,7 +123,6 @@ class MainActivity : AppCompatActivity(), RecognitionCallback {
                 Log.i("Recognition","onPrepared: Success")
                 textView.text = "Recognition ready"
             }
-            RecognitionStatus.FAILURE,
             RecognitionStatus.UNAVAILABLE -> {
                 Log.i("Recognition", "onPrepared: Failure or unavailable")
                 AlertDialog.Builder(this)

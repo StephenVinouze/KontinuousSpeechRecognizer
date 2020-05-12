@@ -5,6 +5,5 @@ package com.github.stephenvinouze.core.models
  */
 enum class RecognitionStatus {
     SUCCESS,
-    FAILURE,
     UNAVAILABLE
 }
