@@ -5,33 +5,13 @@
 [![Android Arsenal](https://img.shields.io/badge/Android%20Arsenal-KontinuousSpeechRecognizer-brightgreen.svg?style=flat)](https://android-arsenal.com/details/1/5790)
 [![GitHub license](http://img.shields.io/badge/license-APACHE2-blue.svg)](https://github.com/StephenVinouze/KontinuousSpeechRecognizer/blob/master/LICENSE)
 
-## Gradle Dependency
-
-Add this in your root `build.gradle` file:
-
-```gradle
-allprojects {
-	repositories {
-		// ... other repositories
-		maven { url "https://jitpack.io" }
-	}
-}
-```
-Then add the following dependency in your project.
-
-```gradle
-dependencies {
-  implementation "com.github.StephenVinouze:KontinuousSpeechRecognizer:{latest_version}"
-}
-```
-
 ## Prelude
 
-Speech recognition is designed to listen commands for a brief moment and deactivate on its own. We wanted to mimic the "OK Google" recognition pattern, hence this library that must be used with special care to prevent battery drain.
+Speech recognition is designed to listen commands for a brief moment and deactivate on its own. I wanted to mimic the "OK Google" recognition pattern. Use it with care to prevent battery drain.
 
-The recognizer is managed on its own via the **KontinuousRecognitionManager** and exposes a few utilitary methods such as `startRecognition`, `stopRecognition`, `cancelRecognition` and `destroyRecognizer`. It is up to you to manage the lifecycle of this manager from your Activity/Service.
+The recognizer is managed on its own via the **KontinuousRecognitionManager** and exposes methods such as `startRecognition`, `stopRecognition`, `cancelRecognition` and `destroyRecognizer`. It is up to you to manage the lifecycle of this manager from your view.
 
-The recognizer will be listening and be respawned all the time once you call `startRecognition` and until you call `stopRecognition`. It expects an activation keyword, such as "Ok Google", then once detected will yield the result to the client and be deactivated until it receives once again the keyword. A sound system will be heard once the activation keyword is detected but you can decide to mute it all.
+The recognizer will be listening and be respawned all the time once you call `startRecognition` and until you call `stopRecognition`. It expects an activation keyword, such as "Ok Google", then once detected will yield the result to the client and stop listening. A sound system will be heard once the activation keyword is detected but you can decide to mute it.
 
 The workflow is explained as follow :
 
@@ -47,7 +27,7 @@ In your *AndroidManifest.xml* file, add the following line if your manifest merg
  
  If you are developing an application targeting SDK 23, remember to take care of runtime permission.
  
- In your Activity, instanciate the **KontinuousRecognitionManager** :
+ In your Activity, create the **KontinuousRecognitionManager** :
  
  ```kotlin
  
@@ -55,18 +35,22 @@ In your *AndroidManifest.xml* file, add the following line if your manifest merg
     /**
      * Put any keyword that will trigger the speech recognition
      */
-    private const val ACTIVATION_KEYWORD = "<YOUR_ACTIVATION_KEYWORD"
+    private const val ACTIVATION_KEYWORD = "<YOUR_ACTIVATION_KEYWORD>"
 }
  
-lateinit var recognitionManager: KontinuousRecognitionManager
+private val recognitionManager: KontinuousRecognitionManager by lazy {
+        KontinuousRecognitionManager(this, activationKeyword = ACTIVATION_KEYWORD, shouldMute = false, callback = this)
+    }
  
 override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    setContentView(R.layout.<your_activity_layout>)
+    setContentView(R.layout.activity_main)
 
-    recognitionManager = KontinuousRecognitionManager(this, activationKeyword = ACTIVATION_KEYWORD, callback = this)
+    recognitionManager.createRecognizer()
     
-    // Request runtime permission if not granted yet
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), RECORD_AUDIO_REQUEST_CODE)
+    }
 }
 
 override fun onDestroy() {
@@ -88,7 +72,28 @@ override fun onPause() {
 }
  ```
  
-We also provide an optional **RecognitionCallback** interface that yields all **RecognitionListener** callbacks in addition to a few custom ones corresponding to the keyword detection and the speech recognition availability (it is known to be unsopported on a range of devices).
+We also provide an optional **RecognitionCallback** interface that yields all **RecognitionListener** callbacks in addition to a few custom ones corresponding to the keyword detection and the speech recognition availability (it is known to be unsupported on a range of devices).
+
+## Gradle Dependency
+
+Add this in your root `build.gradle` file:
+
+```groovy
+allprojects {
+	repositories {
+		// ... other repositories
+		maven { url "https://jitpack.io" }
+	}
+}
+```
+
+Then add the following dependency in your project.
+
+```groovy
+dependencies {
+    implementation "com.github.StephenVinouze:KontinuousSpeechRecognizer:{latest_version}"
+}
+```
 
 ## Pull requests
 

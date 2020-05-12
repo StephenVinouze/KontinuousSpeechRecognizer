@@ -18,19 +18,16 @@ import com.github.stephenvinouze.core.models.RecognitionStatus
 class KontinuousRecognitionManager(
         private val context: Context,
         private val activationKeyword: String,
-        private val shouldMute: Boolean? = false,
+        private val shouldMute: Boolean = false,
         private val callback: RecognitionCallback? = null
 ) : RecognitionListener {
 
-    private var recognizerIntent: Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-
     private var isActivated: Boolean = false
-    private var isListening: Boolean = false
-    private var speech: SpeechRecognizer? = null
-    private var audioManager: AudioManager? = context.getSystemService<AudioManager>()
+    private val speech: SpeechRecognizer by lazy { SpeechRecognizer.createSpeechRecognizer(context) }
+    private val audioManager: AudioManager? = context.getSystemService()
 
-    init {
-        recognizerIntent.run {
+    private val recognizerIntent by lazy {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
@@ -38,15 +35,12 @@ class KontinuousRecognitionManager(
                 putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
             }
         }
-
-        initializeRecognizer()
     }
 
-    private fun initializeRecognizer() {
+    fun createRecognizer() {
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
-            speech = SpeechRecognizer.createSpeechRecognizer(context)
-            speech?.setRecognitionListener(this)
-            callback?.onPrepared(if (speech != null) RecognitionStatus.SUCCESS else RecognitionStatus.FAILURE)
+            speech.setRecognitionListener(this)
+            callback?.onPrepared(RecognitionStatus.SUCCESS)
         } else {
             callback?.onPrepared(RecognitionStatus.UNAVAILABLE)
         }
@@ -54,22 +48,19 @@ class KontinuousRecognitionManager(
 
     fun destroyRecognizer() {
         muteRecognition(false)
-        speech?.destroy()
+        speech.destroy()
     }
 
     fun startRecognition() {
-        if (!isListening) {
-            isListening = true
-            speech?.startListening(recognizerIntent)
-        }
+        speech.startListening(recognizerIntent)
     }
 
     fun stopRecognition() {
-        speech?.stopListening()
+        speech.stopListening()
     }
 
     fun cancelRecognition() {
-        speech?.cancel()
+        speech.cancel()
     }
 
     @Suppress("DEPRECATION")
@@ -97,7 +88,7 @@ class KontinuousRecognitionManager(
     }
 
     override fun onReadyForSpeech(params: Bundle) {
-        muteRecognition((shouldMute != null && shouldMute) || !isActivated)
+        muteRecognition(shouldMute || !isActivated)
         callback?.onReadyForSpeech(params)
     }
 
@@ -118,13 +109,12 @@ class KontinuousRecognitionManager(
             callback?.onError(errorCode)
         }
         isActivated = false
-        isListening = false
 
         when (errorCode) {
             SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> cancelRecognition()
             SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
                 destroyRecognizer()
-                initializeRecognizer()
+                createRecognizer()
             }
         }
 
@@ -149,19 +139,16 @@ class KontinuousRecognitionManager(
             if (isActivated) {
                 isActivated = false
                 callback?.onResults(matches, scores)
+                stopRecognition()
             } else {
-                matches.forEach {
-                    if (it.contains(other = activationKeyword, ignoreCase = true)) {
-                        isActivated = true
-                        callback?.onKeywordDetected()
-                        return@forEach
-                    }
-                }
+                matches.firstOrNull { it.contains(other = activationKeyword, ignoreCase = true) }
+                        ?.let {
+                            isActivated = true
+                            callback?.onKeywordDetected()
+                        }
+                startRecognition()
             }
         }
-
-        isListening = false
-        startRecognition()
     }
 
 }

@@ -37,6 +37,8 @@ class MainActivity : AppCompatActivity(), RecognitionCallback {
         progressBar.visibility = View.INVISIBLE
         progressBar.max = 10
 
+        recognitionManager.createRecognizer()
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), RECORD_AUDIO_REQUEST_CODE)
         }
@@ -121,7 +123,6 @@ class MainActivity : AppCompatActivity(), RecognitionCallback {
                 Log.i("Recognition","onPrepared: Success")
                 textView.text = "Recognition ready"
             }
-            RecognitionStatus.FAILURE,
             RecognitionStatus.UNAVAILABLE -> {
                 Log.i("Recognition", "onPrepared: Failure or unavailable")
                 AlertDialog.Builder(this)
